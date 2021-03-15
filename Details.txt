@@ -1,0 +1,38 @@
+Reference values:
+order_id
+customer_id
+customer_unique_id
+customer_zip_code_prefix
+product_id
+
+EDA intesting datasets:
+order_status(approved,delivered,canceled,created,involved,processing,shipped,unavaliable)
+order_purchase_timestamp(time)
+order_approved_at(time)
+order_delivered_carrier_date(time)
+order_delivered_customer_date(time)
+order_estimated_delivery_date(time)
+review_score(1-5)
+review_creation_date(time)
+review_answer_timestamp(time)
+payment_type(boleto*,credit_card,debit_card,not_defined,voucher)
+payment_installments(1-24, no 19)
+payment_value(float, currency)
+customer_city(location)
+customer_state(location)
+shipping_limit_date(date)
+price(float, currency)
+product_category_name(Category)
+product_name_lenght(int64, min 5 max 76)
+product_description_lenght(int64, min 4 max 3992)
+product_photos_qty(int64, 1-20)
+product_weight_g(int64, min 0 max 40425)
+product_length_cm(int64, min 7 max 105)
+product_height_cm(int64, min 2 max 105)
+product_width_cm(int64, min 6 max 118)
+seller_zip_code_prefix(int64)
+seller_city(Category)
+seller_state(Category)
+
+
+*Boleto: popular Brazilian cash-based payment method with 15% market share. ... Payment is made with a voucher that is issued at checkout and paid at a Brazilian bank or participating shop, online with internet banking or on mobile with a banking app.
