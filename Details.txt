@@ -33,6 +33,7 @@ product_width_cm(int64, min 6 max 118)
 seller_zip_code_prefix(int64)
 seller_city(Category)
 seller_state(Category)
+freight_value(double)
 
 
 *Boleto: popular Brazilian cash-based payment method with 15% market share. ... Payment is made with a voucher that is issued at checkout and paid at a Brazilian bank or participating shop, online with internet banking or on mobile with a banking app.
