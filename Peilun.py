@@ -2,7 +2,6 @@ import pandas as pd
 from pandas_profiling import ProfileReport
 pd.set_option('display.max_columns', None)
 pd.set_option("max_rows", None)
-# df_product_category = pd.read_csv("product_category_name_translation.csv")
 
 
 def get_dataset(output_path: str = "datasets/df_merged_pickle.pkl") -> None:
