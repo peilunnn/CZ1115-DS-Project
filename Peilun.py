@@ -48,19 +48,20 @@ def clean_dataset(path: str = "datasets/df_merged_pickle.pkl") -> pd.DataFrame:
     # WE ARE LEFT WITH CATEGORICAL LEAD_BEHAVIOUR_PROFILE COLUMN TO CLEAN UP W 22% MISSING VALUES
     # WE FILL THE MISSING VALUES WITH THE MOST COMMON CATEGORY
     df = df.fillna(df['lead_behaviour_profile'].value_counts().index[0])
+    # print(df.head())
     return df
 
 
-def EDA(df: pd.DataFrame) -> None:
+def EDA(df: pd.DataFrame, output_path: str = "EDA/profile_report.html") -> None:
     """
     """
     prof = ProfileReport(df)
-    print(prof)
+    prof.to_file(output_path)
 
 
 def main():
     df = clean_dataset()
-    EDA(df)
+    # EDA(df)
 
 
 if __name__ == "__main__":
