@@ -1,17 +1,15 @@
-def get_d()
-    import numpy as np
-    import pandas as pd
-    import seaborn as sb
-    import matplotlib.pyplot as plt
-    from Peilun import clean_dataset
-    df = clean_dataset()
-    #d = df but no object type
-    d = df.loc[:, df.dtypes != np.object]
-    #Although this is a numerical data, this value everything is 0/NaN, thus unable to use
-    d = d.drop(['declared_monthly_revenue'], axis=1) 
+import numpy as np
+import pandas as pd
+import seaborn as sb
+import matplotlib.pyplot as plt
+from Peilun import clean_dataset
+df = clean_dataset()
+#d = df but no object type
+d = df.loc[:, df.dtypes != np.object]
+#Although this is a numerical data, this value everything is 0/NaN, thus unable to use
+d = d.drop(['declared_monthly_revenue'], axis=1) 
 
-def cor():
-    d = get_d()
+def Cor():
     print(d.corr())
     #Using Pearson Correlation
     plt.figure(figsize=(12,10))
@@ -19,8 +17,7 @@ def cor():
     sb.heatmap(cor, annot=True, cmap=plt.cm.Reds)
     plt.show()
 
-def Display_filtered_corr_values():
-    d = get_d()
+def Display_filtered():
     d = pd.DataFrame(d, columns = d.columns)
     corr_pairs = d.corr().unstack()
     sorted_pairs = corr_pairs.sort_values(kind="quicksort")
@@ -32,7 +29,6 @@ def Display_filtered_corr_values():
     result.apply(pd.Series)
 
 def Target_corr():
-    d = get_d()
     cor = d.corr()
     print("---Target correlation---")
     #Correlation with output variable
@@ -48,8 +44,7 @@ def Target_corr():
     print(df[["product_weight_g","payment_value"]].corr())
 
 
-def Model_based_feature_selection():
-    d = get_d()
+def Model_based_fs():
     from sklearn.tree import DecisionTreeClassifier
     kepler_X = d.iloc[:, 1:]
     kepler_y = d.iloc[:, 0]
@@ -58,8 +53,7 @@ def Model_based_feature_selection():
     print("---Model-based feature selection (SelectFromModel)---")
     pd.Series(clf.feature_importances_, index=d.columns[1:]).plot.bar(color='steelblue', figsize=(12, 6))
 
-def Principal_components():
-    d = get_d()
+def Principal_comp():
     print("---Principal components---")
     from sklearn.preprocessing import StandardScaler
     cor_mat2 = np.corrcoef(d.T)
