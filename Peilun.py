@@ -2,6 +2,7 @@ import pandas as pd
 from pandas_profiling import ProfileReport
 pd.set_option('display.max_columns', None)
 pd.set_option("max_rows", None)
+DEBUG = True
 
 
 def get_dataset(output_path: str = "datasets/df_merged_pickle.pkl") -> None:
@@ -23,7 +24,7 @@ def get_dataset(output_path: str = "datasets/df_merged_pickle.pkl") -> None:
     df_merged.to_pickle(output_path)
 
 
-def clean_dataset(path: str = "datasets/df_merged_pickle.pkl") -> pd.DataFrame:
+def clean_dataset(path: str = f"datasets/{'df_test' if DEBUG else 'df_merged_pickle'}.pkl") -> pd.DataFrame:
     """
     """
     df = pd.read_pickle(path)
@@ -48,7 +49,7 @@ def clean_dataset(path: str = "datasets/df_merged_pickle.pkl") -> pd.DataFrame:
     # WE ARE LEFT WITH CATEGORICAL LEAD_BEHAVIOUR_PROFILE COLUMN TO CLEAN UP W 22% MISSING VALUES
     # WE FILL THE MISSING VALUES WITH THE MOST COMMON CATEGORY
     df = df.fillna(df['lead_behaviour_profile'].value_counts().index[0])
-    # print(df.head())
+    print(df.head())
     return df
 
 
