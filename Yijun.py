@@ -7,42 +7,43 @@ from sklearn.preprocessing import StandardScaler
 from Peilun import clean_dataset
 df = clean_dataset()
 #d = df but no object type
-df_filtered = df.loc[:, df.dtypes != np.object]
-#Although this is a numerical data, this value everything is 0/NaN, thus unable to use
-print("shape:",df.shape)
-print("----")
-df_filtered = df.loc[:, df.dtypes != np.object]
-df_filtered = df_filtered.drop(['declared_monthly_revenue'], axis=1) #this value everything is 0/NaN
+df_numeric = df.loc[:, df.dtypes != np.object]
+#Although declared_monthly_revenue is a numerical data, this value everything is 0/NaN, thus unable to use
+df_numeric = df.loc[:, df.dtypes != np.object]
+df_numeric = df_numeric.drop(['declared_monthly_revenue'], axis=1) 
 
-#Using Pearson Correlation
-def Cor_df():
-    print(df_filtered.corr())
+
+'''Using Pearson Correlation to show all the correlation relationship between one and another.'''  
+def Pearson_Corr_values():
+    print(df_numeric.corr())
     plt.figure(figsize=(12,10))
-    cor = df_filtered.corr()
-    sb.heatmap(cor, annot=True, cmap=plt.cm.Reds)
+    PV_array = df_numeric.corr()
+    sb.heatmap(PV_array, annot=True, cmap=plt.cm.Reds)
     plt.show()
     return
 
-def Display_filtered():
-    #d = pd.DataFrame(d, columns = d.columns)
-    corr_pairs = df_filtered.corr().unstack()
+'''Display the top and bottom 0.3 Correlation data'''
+def Display_filtered_PCV(value):
+    corr_pairs = df_numeric.corr().unstack()
     sorted_pairs = corr_pairs.sort_values(kind="quicksort")
-    print("---corr values that are more than 0.3 scores---\n")
+    print("---corr values that are more than", value ,"scores---\n")
     adjusted = sorted_pairs[:len(sorted_pairs)-len([x for x in sorted_pairs if x==1])]
-    head = adjusted[:len([x for x in adjusted if x<-0.3])]
-    tail = adjusted[len(adjusted)-len([x for x in adjusted if x>0.3]):]
+    head = adjusted[:len([x for x in adjusted if x<-value])]
+    tail = adjusted[len(adjusted)-len([x for x in adjusted if x>value]):]
     result = pd.concat([head,tail])
     print(result.apply(pd.Series))
     return
 
-def Target_corr():
-    cor = df_filtered.corr()
+'''Targets single data and prints out every related correlation relationships, with a value of more than abs(0.3)'''
+def Target_corr(value,data):
+    PV_array = df_numeric.corr()
     print("---Targeted correlation---")
     #Correlation with output variable
-    cor_target = abs(cor["price"])
+    cor_target = abs(PV_array[data])
 
     #Selecting highly correlated features of a cor higher than 0.3
-    relevant_features = cor_target[cor_target>0.3]
+    relevant_features = cor_target[cor_target>value]
+    relevant_features = relevant_features[relevant_features<1]
     print(relevant_features,"\n")
 
     # print("---To justify that the predictors are not very correlated and able to be used---")
@@ -51,20 +52,22 @@ def Target_corr():
     # print(df[["product_weight_g","payment_value"]].corr())
     return
 
+'''Displays the features importance in regards to the data using DecisionTreeCrassifier'''
 def Model_based_fs():
-    kepler_X = df_filtered.iloc[:, 1:]
-    kepler_y = df_filtered.iloc[:, 0]
+    kepler_X = df_numeric.iloc[:, 1:]
+    kepler_y = df_numeric.iloc[:, 0]
     clf = DecisionTreeClassifier()
     clf.fit(kepler_X, kepler_y)
     print("---Model-based feature selection (SelectFromModel)---")
-    pd.Series(clf.feature_importances_, index=d.columns[1:]).plot.bar(color='steelblue', figsize=(12, 6))
+    pd.Series(clf.feature_importances_, index=df_numeric.columns[1:]).plot.bar(color='steelblue', figsize=(12, 6))
     plt.show()
     return
 
+'''Principal components are new variables that are constructed as linear combinations or mixtures of the initial variables. These combinations are done in such a way that the new variables (i.e., principal components) are uncorrelated and most of the information within the initial variables is squeezed or compressed into the first components. 
+So, the idea is 10-dimensional data gives you 18 principal components, but PCA tries to put maximum possible information in the first component, then maximum remaining information in the second and so on, until having something like shown in the scree plot below.'''
 def Principal_comp():
     print("---Principal components---")
-    print("Principal components are new variables that are constructed as linear combinations or mixtures of the initial variables. These combinations are done in such a way that the new variables (i.e., principal components) are uncorrelated and most of the information within the initial variables is squeezed or compressed into the first components. So, the idea is 10-dimensional data gives you 18 principal components, but PCA tries to put maximum possible information in the first component, then maximum remaining information in the second and so on, until having something like shown in the scree plot below.")
-    cor_mat2 = np.corrcoef(df_filtered.T)
+    cor_mat2 = np.corrcoef(df_numeric.T)
     eig_vals, eig_vecs = np.linalg.eig(cor_mat2)
 
     tot = sum(eig_vals)
@@ -81,10 +84,20 @@ def Principal_comp():
         plt.xlabel('Principal components')
         plt.legend(loc='best')
         plt.tight_layout() 
+        plt.show()
     return
 
-print("From these we can infer that [Price] is the best predictor, followed by [payment_value] and [product_weight_g]")
-print("[Price] is the best predictor followed by [payment_value] as it has the highest correlation in regards to the dataset,and [product_weight_g] is chosen because it has the highest appearance in the top 10 correlation data.")
+#From these we can infer that [Price] is the best predictor, followed by [payment_value], [product_weight_g] and [geolocation_lng]
+#[Price] is the best predictor followed by [payment_value] as it has the highest correlation in regards to the dataset,and [product_weight_g] is chosen because it has the highest appearance in the top 10 correlation data, while [geolocation_lng] has the highest inverse-correlation and appearance at the negative trend.
+
+def main():
+    Display_filtered_PCV(0.3)
+    Target_corr(0.3,'price')
+    Model_based_fs()
+    Principal_comp()
+
+if __name__ == "__main__":
+    main()
 
 # sources:                         
 # https://likegeeks.com/python-correlation-matrix/  
