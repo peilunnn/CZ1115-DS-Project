@@ -61,8 +61,8 @@ def EDA(df: pd.DataFrame, output_path: str = "EDA/profile_report.html") -> None:
 
 
 def main():
-    df_cleaned = clean_dataset()
-    # EDA(df_cleaned)
+    df = clean_dataset()
+    # EDA(df)
 
 
 if __name__ == "__main__":
