@@ -1,4 +1,4 @@
-def jiaxin():
+def time_series():
     import pandas as pd 
     import numpy as np
     import seaborn as sb
@@ -62,3 +62,45 @@ def jiaxin():
     plt.plot(fur_month,label='furniture_decor')
     plt.plot(com_month,label='computers_accessories')
     plt.legend()
+    
+def findings():    
+    import pandas as pd 
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from Peilun import clean_dataset
+    df=clean_dataset()
+    df = df.merge(pd.read_csv("datasets/product_category_name_translation.csv"),how="inner", on="product_category_name")
+    customer_by_state = df[['customer_unique_id', 'customer_state']].groupby('customer_state').count().reset_index()
+    customer_by_state = customer_by_state.sort_values(by=['customer_unique_id'])
+   
+    #no. of orders per country
+    plt.style.use('seaborn')
+    plt.figure(figsize=(15,10))
+    plt.bar(customer_by_state['customer_state'], customer_by_state['customer_unique_id'])
+    plt.show()
+    
+    #best selling category
+    df['purchase_month']=pd.DatetimeIndex(df['order_purchase_timestamp']).month
+    sales_df=df.groupby(['product_category_name'])['price'].sum()
+    best_sellers=sales_df.nlargest(10).index
+
+    best_df=df[df['product_category_name'].isin(best_sellers)]
+
+    best_monthly=best_df.pivot_table(index='purchase_month',columns='product_category_name_english',values='price', aggfunc='sum')
+    best_monthly.plot(kind='bar',figsize=(12, 10))
+    plt.title('best selling categories\' monthly earnings')
+    plt.xlabel('month')
+    plt.ylabel('total earnings')
+    
+    #no. of items per month
+    df['order_purchase_year'] = pd.to_datetime(df['order_purchase_timestamp']).dt.year
+    df['order_purchase_month'] = pd.to_datetime(df['order_purchase_timestamp']).dt.month
+    orders = df[['order_id', 'order_purchase_year', 'order_purchase_month']]
+    orders = orders.groupby(['order_purchase_month', 'order_purchase_year']).count().reset_index()
+    orders = orders.sort_values(by=['order_purchase_year', 'order_purchase_month'])
+    orders["period"] =  orders["order_purchase_month"].astype(str) + "/" + orders["order_purchase_year"].astype(str)
+    plt.figure(figsize=(15,10))
+    plt.bar(orders['period'], orders['order_id'])
+    plt.xticks(rotation=75, fontsize=15, weight='bold')
+    plt.yticks(fontsize=15, weight='bold')
+    plt.show()
