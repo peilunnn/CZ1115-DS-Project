@@ -294,45 +294,70 @@ def plot_clusters(CLV_df: pd.DataFrame) -> None:
     """
 
     # REVENUE AGAINST FREQUENCY
-    tx_graph = CLV_df.query("revenue < 125000 and frequency < 600")
-    x1 = tx_graph.query("category == 'low_value'")['frequency']
-    y1 = tx_graph.query("category == 'low_value'")['revenue']
+    graph1 = CLV_df.query("revenue < 4000000 and frequency < 7000")
+    x1_low = graph1.query("category == 'low_value'")['frequency']
+    y1_low = graph1.query("category == 'low_value'")['revenue']
 
-    x2 = tx_graph.query("category == 'mid_value'")['frequency']
-    y2 = tx_graph.query("category == 'mid_value'")['revenue']
+    x1_mid = graph1.query("category == 'mid_value'")['frequency']
+    y1_mid = graph1.query("category == 'mid_value'")['revenue']
 
-    x3 = tx_graph.query("category == 'high_value'")['frequency'],
-    y3 = tx_graph.query("category == 'high_value'")['revenue'],
+    x1_high = graph1.query("category == 'high_value'")['frequency'],
+    y1_high = graph1.query("category == 'high_value'")['revenue'],
 
-    # ax = CLV_df.plot(kind='scatter', x=x1, y=y1, color='DarkBlue', label='Group 1')
-    # CLV_df.plot(kind='scatter', x=x2, y=y2, color='DarkGreen', label='Group 2', ax=ax)
+    fig = plt.figure(figsize=(20, 20))
 
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
+    ax = fig.add_subplot(111)
+    ax.scatter(x1_low, y1_low, s=10, c='b', marker="s", label='low')
+    ax.scatter(x1_mid, y1_mid, s=10, c='r', marker="o", label='mid')
+    ax.scatter(x1_high, y1_high, s=10, c='g', marker="o", label='high')
+    plt.legend(loc='upper right')
+    plt.title("Revenue against Frequency")
+    plt.xlabel("Frequency")
+    plt.ylabel("Revenue")
 
-    ax1.scatter(x1, y1, s=10, c='b', marker="s", label='low')
-    ax1.scatter(x2, y2, s=10, c='r', marker="o", label='mid')
-    ax1.scatter(x3, y3, s=10, c='g', marker="o", label='high')
-    plt.legend(loc='upper left')
+    # REVENUE AGAINST RECENCY
+    graph2 = CLV_df.query("revenue < 4000000 and recency < 700")
+    x2_low = graph2.query("category == 'low_value'")['recency']
+    y2_low = graph2.query("category == 'low_value'")['revenue']
 
+    x2_mid = graph2.query("category == 'mid_value'")['recency']
+    y2_mid = graph2.query("category == 'mid_value'")['revenue']
 
-def train_test(CLV_df: pd.DataFrame):
-    """
-    """
-    # # WE TAKE 3 MONTHS OF DATA, CALCULATE RFM AND USE IT TO PREDICT CLV FOR THE NEXT 6 MONTHS
-    # print(CLV_df.order_purchase_timestamp.min())
-    # print(CLV_df.order_purchase_timestamp.max())
-    # CLV_3m = CLV_df.loc['2016-10-04':'2016-02-01']
+    x2_high = graph2.query("category == 'high_value'")['recency'],
+    y2_high = graph2.query("category == 'high_value'")['revenue'],
 
-    # CLV_df[(CLV_df.order_purchase_timestamp < date(2016, 10, 4)) & (
-    #     CLV_df.order_purchase_timestamp >= date(2016, 10, 4))].reset_index(drop=True)
+    fig = plt.figure(figsize=(20, 20))
+    ax = fig.add_subplot(111)
+    ax.scatter(x2_low, y2_low, s=10, c='b', marker="s", label='low')
+    ax.scatter(x2_mid, y2_mid, s=10, c='r', marker="o", label='mid')
+    ax.scatter(x2_high, y2_high, s=10, c='g', marker="o", label='high')
+    plt.legend(loc='upper right')
+    plt.title("Revenue against Recency")
+    plt.xlabel("Recency")
+    plt.ylabel("Revenue")
 
-    # tx_6m = CLV_df[(CLV_df.order_purchase_timestamp >= date(2011, 6, 1)) & (
-    # CLV_df.order_purchase_timestamp < date(2011, 12, 1))].reset_index(drop=True)
+    # FREQUENCY AGAINST RECENCY
+    graph3 = CLV_df.query("frequency < 7000 and recency < 700")
+    y3_low = graph3.query("category == 'low_value'")['recency']
+    x3_low = graph3.query("category == 'low_value'")['frequency']
 
-    cols_extracted = ["customer_unique_id", "recency", "recency_cluster",
-                      "frequency", "frequency_cluster", "revenue", "revenue_cluster", "overall_score", "category"]
-    feature_set = CLV_df[cols_extracted]
+    y3_mid = graph3.query("category == 'mid_value'")['recency']
+    x3_mid = graph3.query("category == 'mid_value'")['frequency']
+
+    y3_high = graph3.query("category == 'high_value'")['recency'],
+    x3_high = graph3.query("category == 'high_value'")['frequency'],
+
+    fig = plt.figure(figsize=(20, 20))
+    ax = fig.add_subplot(111)
+    ax.scatter(x3_low, y3_low, s=10, c='b', marker="s", label='low')
+    ax.scatter(x3_mid, y3_mid, s=10, c='r', marker="o", label='mid')
+    ax.scatter(x3_high, y3_high, s=10, c='g', marker="o", label='high')
+    plt.legend(loc='upper right')
+    plt.title("Frequency against Recency")
+    plt.xlabel("Recency")
+    plt.ylabel("Frequency")
+
+    # We see that the clusters for recency, frequency and revenue are distinct from one another. There are also not many high value customers, and this could mean that most customers buy in bulk (leading to a high revenue) but are just one-off purchases (low frequency) and the purchases are not very frequent (low recency), resulting in a low or mid customer lifetime value.
 
 
 def main():
@@ -346,7 +371,6 @@ def main():
     CLV_df = categorize(CLV_df)
     # print(CLV_df.head())
     plot_clusters(CLV_df)
-    # train_test(CLV_df)
 
 
 if __name__ == "__main__":
