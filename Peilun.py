@@ -13,7 +13,7 @@ from typing import List
 
 
 # INITIATE PLOTLY
-pyoff.init_notebook_mode()
+#pyoff.init_notebook_mode()
 pd.set_option('display.max_columns', None)
 pd.set_option("max_rows", None)
 DEBUG = True
