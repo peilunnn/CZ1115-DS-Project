@@ -3,6 +3,10 @@ from pandas_profiling import ProfileReport
 import seaborn as sb
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+from sklearn.model_selection import train_test_split
+import xgboost as xgb
+from sklearn.metrics import classification_report
+
 # import plotly.plotly as py
 # import plotly.offline as pyoff
 # import plotly.graph_objs as go
@@ -222,7 +226,7 @@ def elbow_method(CLV_df: pd.DataFrame, RFM_name: str) -> None:
     plt.figure()
     plt.plot(list(sse.keys()), list(sse.values()))
     plt.xlabel("No. of clusters")
-    plt.show()
+    plt.show() 
 
     # From the inertia graph, the cluster value where the decrease in inertia value becomes constant is 4.This is the optimal cluster number.
 
@@ -367,10 +371,10 @@ def split_months(CLV_df: pd.DataFrame) -> pd.DataFrame:
     # From Jiaxin's timeseries, we have 21 months of data, from 2016 Oct to 2018 Aug. Thus we will take 7 months of data, calculate RFM and use it to predict CLV for the next 14 months.
     CLV_df_copy = CLV_df.copy()
     CLV_df_copy = CLV_df_copy.set_index(["order_purchase_timestamp"])
-    CLV_7m = CLV_df_copy.loc['2016-10-01':'2017-06-01']
+    CLV_7m = CLV_df_copy.loc['2016-10-01':'2017-05-01']
     CLV_7m = CLV_7m[["customer_unique_id", "recency", "recency_cluster", "frequency",
                      "frequency_cluster", "revenue", "revenue_cluster", "overall_score", "category"]]
-    CLV_14m = CLV_df_copy.loc['2016-07-01':'2018-08-01']
+    CLV_14m = CLV_df_copy.loc['2016-05-01':'2018-07-01']
     CLV_14m = CLV_14m[["customer_unique_id", "recency", "recency_cluster", "frequency",
                        "frequency_cluster", "revenue", "revenue_cluster", "overall_score", "category"]]
 
@@ -387,7 +391,7 @@ def correlation_plot(CLV_df: pd.DataFrame, CLV_14m: pd.DataFrame) -> pd.DataFram
     # Before building the model, let's look at the correlation between our predictor, overall RFM score and response, CLV.
     # CLV AGAINST OVERALL_SCORE
     CLV_merged = pd.merge(CLV_df, CLV_14m, on='customer_unique_id', how='left')
-    CLV_merged = CLV_merged.fillna(0)
+    #CLV_merged = CLV_merged.fillna(0)
     print(CLV_merged.columns)
 
     graph = CLV_merged.query("CLV < 4000000")
@@ -435,10 +439,10 @@ def CLV_cluster(CLV_merged: pd.DataFrame) -> pd.DataFrame:
 def classification(CLV_merged: pd.DataFrame) -> None:
     """
     """
-
     # USE ONE HOT ENCODING TO CONVERT CATEGORICAL COLUMNS TO NUMERICAL COLUMN
+    CLV_merged = CLV_merged.fillna(0)
     CLV_class = pd.get_dummies(CLV_merged)
-
+    
     # WTF DOESNT MAKE SENSE
     # corr_matrix = CLV_class.corr()
     # print("Correlation with CLV_cluster:")
@@ -460,6 +464,49 @@ def classification(CLV_merged: pd.DataFrame) -> None:
     print(classification_report(y_test, y_pred))
 
 
+def classification_V2(CLV_14m: pd.DataFrame,CLV_df: pd.DataFrame) -> None:
+    ''' THIS PART I FEEL LIKE YOUR ABOVE FUNCTIONS HAD ALR COVER IT, HOWEVER THE MERGED DATA IS DIFFERENT WITH ALL THE _X _Y 
+        WHICH IS NOT WANTED, THUS I JUST REMAKE, HOWEVER I FEEL THAT THE kmeans = KMeans(n_clusters=3) STH IS WRONG, 
+        REFER TO FIGURE X IN TELEGRAM '''
+    CLV_df_14m = CLV_14m.groupby('customer_unique_id')['revenue'].sum().reset_index()
+    CLV_df_14m.columns = ['customer_unique_id','m14_Revenue']
+    CLV_merged = pd.merge(CLV_df, CLV_df_14m, on='customer_unique_id', how='left')
+    CLV_merged = CLV_merged.fillna(0)
+    CLV_merged = CLV_merged[CLV_merged['m14_Revenue']<CLV_merged['m14_Revenue'].quantile(0.99)]
+
+    kmeans = KMeans(n_clusters=3)  ##############<---------------------------------
+    kmeans.fit(CLV_merged[['m14_Revenue']])
+    CLV_merged['CLV'] = kmeans.predict(CLV_merged[['m14_Revenue']])
+
+    #order cluster number based on LTV
+    CLV_merged = order_cluster('CLV', 'm14_Revenue',CLV_merged,True)
+
+    #----------------------------------------------ANYTHING BELOW HERE IS THE CLASSIFICATION PART----------------------------------------------------
+    CLV_class = pd.concat([CLV_merged,pd.get_dummies(CLV_merged["category"])], axis = 1).rename(columns={"high_value":"category_high_value","low_value":"category_low_value","mid_value": "category_mid_value"}).drop(['order_id','product_id','customer_unique_id','geolocation_state','category','order_purchase_timestamp'],axis=1)       
+    #calculate and show correlations
+    corr_matrix = CLV_class.corr()
+    print(corr_matrix['CLV'].sort_values(ascending=False))
+
+    #create X and y, X will be feature set and y is the label - LTV
+    X = CLV_class.drop(['CLV','m14_Revenue'],axis=1)
+    y = CLV_class['CLV']
+
+    #split training and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=56)
+
+    #XGBoost Multiclassification Model
+    ltv_xgb_model = xgb.XGBClassifier(max_depth=0, learning_rate=0.1,objective= 'multi:softprob',n_jobs=-1).fit(X_train, y_train)
+
+    print('Accuracy of XGB classifier on training set: {:.2f}'
+        .format(ltv_xgb_model.score(X_train, y_train)))
+    print('Accuracy of XGB classifier on test set: {:.2f}'
+        .format(ltv_xgb_model.score(X_test[X_train.columns], y_test)))
+
+    y_pred = ltv_xgb_model.predict(X_test)
+    print(classification_report(y_test, y_pred))
+
+
+
 def main():
     df = clean_dataset()
     # EDA(df)
@@ -474,12 +521,8 @@ def main():
     CLV_7m, CLV_14m = split_months(CLV_df)
     CLV_merged = correlation_plot(CLV_df, CLV_14m)
     CLV_merged = CLV_cluster(CLV_merged)
-    classification(CLV_merged)
-
-
-if __name__ == "__main__":
-    main()
-
+    #classification(CLV_merged)
+    classification_V2(CLV_14m,CLV_df)
 
 if __name__ == "__main__":
     main()
