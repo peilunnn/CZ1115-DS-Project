@@ -229,7 +229,7 @@ def elbow_method(CLV_df: pd.DataFrame, RFM_name: str) -> None:
 
 def k_means_clustering(CLV_df: pd.DataFrame, RFM_name: str, cluster_no: int) -> pd.DataFrame:
     """
-    Adds the R/F/M_cluster dataframes to original CLV_df dataframe.
+    Adds the ordered R/F/M_cluster dataframes to original CLV_df dataframe.
     """
 
     # ADD 4 CLUSTERS FOR R/F/M TO CLV_df DATAFRAME
@@ -360,6 +360,106 @@ def plot_clusters(CLV_df: pd.DataFrame) -> None:
     # We see that the clusters for recency, frequency and revenue are distinct from one another. There are also not many high value customers, and this could mean that most customers buy in bulk (leading to a high revenue) but are just one-off purchases (low frequency) and the purchases are not very frequent (low recency), resulting in a low or mid customer lifetime value.
 
 
+def split_months(CLV_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Splits the 21 months of data in CLV_df into 7 months and 14 months for train test set later.
+    """
+    # From Jiaxin's timeseries, we have 21 months of data, from 2016 Oct to 2018 Aug. Thus we will take 7 months of data, calculate RFM and use it to predict CLV for the next 14 months.
+    CLV_df_copy = CLV_df.copy()
+    CLV_df_copy = CLV_df_copy.set_index(["order_purchase_timestamp"])
+    CLV_7m = CLV_df_copy.loc['2016-10-01':'2017-06-01']
+    CLV_7m = CLV_7m[["customer_unique_id", "recency", "recency_cluster", "frequency",
+                     "frequency_cluster", "revenue", "revenue_cluster", "overall_score", "category"]]
+    CLV_14m = CLV_df_copy.loc['2016-07-01':'2018-08-01']
+    CLV_14m = CLV_14m[["customer_unique_id", "recency", "recency_cluster", "frequency",
+                       "frequency_cluster", "revenue", "revenue_cluster", "overall_score", "category"]]
+
+    # There is no cost specified in the dataset, so we take only revenue as CLV.
+    CLV_14m["CLV"] = CLV_14m["revenue"]
+
+    return CLV_7m, CLV_14m
+
+
+def correlation_plot(CLV_df: pd.DataFrame, CLV_14m: pd.DataFrame) -> pd.DataFrame:
+    """
+    Plots a scatter plot of 14m CLV against overall_score.
+    """
+    # Before building the model, let's look at the correlation between our predictor, overall RFM score and response, CLV.
+    # CLV AGAINST OVERALL_SCORE
+    CLV_merged = pd.merge(CLV_df, CLV_14m, on='customer_unique_id', how='left')
+    CLV_merged = CLV_merged.fillna(0)
+    print(CLV_merged.columns)
+
+    graph = CLV_merged.query("CLV < 4000000")
+    x_low = graph.query("category_x == 'low_value'")['overall_score_x']
+    y_low = graph.query("category_y == 'low_value'")['CLV']
+
+    x_mid = graph.query("category_x == 'mid_value'")['overall_score_x']
+    y_mid = graph.query("category_y == 'mid_value'")['CLV']
+
+    x_high = graph.query("category_x == 'high_value'")['overall_score_x'],
+    y_high = graph.query("category_y == 'high_value'")['CLV'],
+
+    fig = plt.figure(figsize=(20, 20))
+    ax = fig.add_subplot(111)
+    ax.scatter(x_low, y_low, s=10, c='b', marker="s", label='low')
+    ax.scatter(x_mid, y_mid, s=10, c='r', marker="o", label='mid')
+    ax.scatter(x_high, y_high, s=10, c='g', marker="o", label='high')
+    plt.legend(loc='upper right')
+    plt.title("14m CLV against overall_score")
+    plt.xlabel("overall_score")
+    plt.ylabel("14m CLV")
+    return CLV_merged
+
+    # It's quite clear that there is a positive correlation between overall_score and CLV: the higher the RFM score, the higher the CLV.
+
+
+def CLV_cluster(CLV_merged: pd.DataFrame) -> pd.DataFrame:
+    """
+    Creates 3 clusters for CLV_merged.
+    """
+
+    # REMOVE OUTLIERS
+    CLV_merged = CLV_merged[CLV_merged['CLV']
+                            < CLV_merged['CLV'].quantile(0.99)]
+
+    # Now we cluster CLV into 3 different clusters: low, mid and high CLV.
+
+    # CREATE 3 CLUSTERS
+    k_means_clustering(CLV_merged, "CLV", 3)
+
+    # Cluster 2 is the best (mean 983 CLV) and cluster 0 is the worst (mean 77 CLV).
+    return CLV_merged
+
+
+def classification(CLV_merged: pd.DataFrame) -> None:
+    """
+    """
+
+    # USE ONE HOT ENCODING TO CONVERT CATEGORICAL COLUMNS TO NUMERICAL COLUMN
+    CLV_class = pd.get_dummies(CLV_merged)
+
+    # WTF DOESNT MAKE SENSE
+    # corr_matrix = CLV_class.corr()
+    # print("Correlation with CLV_cluster:")
+    # print(corr_matrix['CLV_cluster'].sort_values(ascending=False))
+
+    X = CLV_class.drop(['CLV_cluster', 'CLV'], axis=1)
+    y = CLV_class['CLV_cluster']
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.05, random_state=56)
+
+    # We use XGBoost Multiclassification Model
+    CLV_XGB_model = xgb.XGBClassifier(
+        max_depth=5, learning_rate=0.1, objective='multi:softprob', n_jobs=-1).fit(X_train, y_train)
+
+    print(f"Train set accuracy: {CLV_XGB_model.score(X_train, y_train)}")
+    print(
+        f"Test set accuracy: {CLV_XGB_model.score(X_test[X_train.columns], y_test)}")
+    y_pred = CLV_XGB_model.predict(X_test)
+    print(classification_report(y_test, y_pred))
+
+
 def main():
     df = clean_dataset()
     # EDA(df)
@@ -370,7 +470,15 @@ def main():
     CLV_df = overall_RFM(CLV_df)
     CLV_df = categorize(CLV_df)
     # print(CLV_df.head())
-    plot_clusters(CLV_df)
+    # plot_clusters(CLV_df)
+    CLV_7m, CLV_14m = split_months(CLV_df)
+    CLV_merged = correlation_plot(CLV_df, CLV_14m)
+    CLV_merged = CLV_cluster(CLV_merged)
+    classification(CLV_merged)
+
+
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":
