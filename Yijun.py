@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from Peilun import clean_dataset
 df = clean_dataset()
-
+#d = df but no object type
 df_numeric = df.loc[:, df.dtypes != np.object]
 #Although declared_monthly_revenue is a numerical data, this value everything is 0/NaN, thus unable to use
 df_numeric = df.loc[:, df.dtypes != np.object]
@@ -24,6 +24,7 @@ def Pearson_Corr_values():
     plt.figure(figsize=(12,10))
     PV_array = df_numeric.corr()
     sb.heatmap(PV_array, annot=True, cmap=plt.cm.Reds)
+    plt.tight_layout() 
     plt.show()
     return
 
@@ -43,13 +44,18 @@ def Display_filtered_PCV(value):
 def Target_corr(value,data):
     PV_array = df_numeric.corr()
     print("---Targeted correlation---")
-    #CORRELATION WITH OUTPUT VARIABLE
+    #Correlation with output variable
     cor_target = abs(PV_array[data])
 
-    #SELECTING HIGHLY CORRELATED FEATURES OF A COR HIGHER THAN 0.3
+    #Selecting highly correlated features of a cor higher than 0.3
     relevant_features = cor_target[cor_target>value]
     relevant_features = relevant_features[relevant_features<1]
     print(relevant_features,"\n")
+
+    # print("---To justify that the predictors are not very correlated and able to be used---")
+    # #Will need to manual change the predicators
+    # print(df[["payment_value","freight_value"]].corr())
+    # print(df[["product_weight_g","payment_value"]].corr())
     return
 
 '''Displays the features importance in regards to the data using DecisionTreeCrassifier'''
@@ -89,8 +95,8 @@ def Principal_comp():
     return
 
 #----------------------------------------------------------------------------------------------------CONCLUSION----------------------------------------------------------------------------------------------------
-#From these we can infer that [payment_value], [product_weight_g] and [geolocation_lng] are the best predictors to predict [price]
-#[payment_value] is the best predictor as it has the highest correlation in regards to [price],followed by [product_weight_g] as it has the highest appearance in the top 10 correlation data, while [geolocation_lng] has the highest inverse-correlation and appearance at the negative trend.
+#From these we can infer that [Price] is the best predictor, followed by [payment_value], [product_weight_g] and [geolocation_lng]
+#[Price] is the best predictor followed by [payment_value] as it has the highest correlation in regards to the dataset,and [product_weight_g] is chosen because it has the highest appearance in the top 10 correlation data, while [geolocation_lng] has the highest inverse-correlation and appearance at the negative trend.
 
 
 '''==================================================================================================REGRESSION=================================================================================================='''
@@ -103,17 +109,17 @@ def Predict_Price_Linreg():
     print("Train Set :", X_train.shape, y_train.shape)
     print("Test Set  :", X_test.shape, y_test.shape)
 
-    # CREATE A LINEAR REGRESSION OBJECT
+    # Create a Linear Regression object
     linreg = LinearRegression()
 
-    # TRAIN THE LINEAR REGRESSION MODEL
+    # Train the Linear Regression model
     linreg.fit(X_train, y_train)
 
-    # PREDICT PRICE VALUES CORRESPONDING TO PREDICTOR
+    # Predict SalePrice values corresponding to Predictors
     y_train_pred = linreg.predict(X_train)
     y_test_pred = linreg.predict(X_test)
 
-    # PLOT THE PREDICTIONS VS THE TRUE VALUES
+    # Plot the Predictions vs the True values
     f, axes = plt.subplots(1, 2, figsize=(24, 12))
     axes[0].scatter(y_train, y_train_pred, color = "blue")
     axes[0].plot(y_train, y_train, 'w-', linewidth = 1)
@@ -130,7 +136,7 @@ def Predict_Price_Linreg():
 
     y = pd.DataFrame(df['price'])
 
-    # SUMMARIZE THE ACTUALS, PREDICTIONS AND ERRORS
+    # Summarize the Actuals, Predictions and Errors
     y_pred = (pd.DataFrame(y_pred, columns = ["Pred_Price"], index = df.index)).round({'Pred_Price':2})
     Result = pd.concat([X_pred, y_pred], axis = 1)
 
@@ -145,13 +151,13 @@ def Predict_Price_Linreg():
     Result2 = Result.rename(columns={"payment_value":"Payment","freight_value":"Freight","product_weight_g": "PWeight_g"})
     print(Result2.drop_duplicates().head(100))
 
-    # CHECK THE GOODNESS OF FIT (ON TRAIN DATA)
+    # Check the Goodness of Fit (on Train Data)
     print("\nGoodness of Fit of Model \tTrain Dataset")
     print("Explained Variance (R^2) \t:", linreg.score(X_train, y_train))
     print("Mean Squared Error (MSE) \t:", mean_squared_error(y_train, y_train_pred))
     print()
 
-    # CHECK THE GOODNESS OF FIT (ON TEST DATA)
+    # Check the Goodness of Fit (on Test Data)
     print("Goodness of Fit of Model \tTest Dataset")
     print("Explained Variance (R^2) \t:", linreg.score(X_test, y_test))
     print("Mean Squared Error (MSE) \t:", mean_squared_error(y_test, y_test_pred))
@@ -168,11 +174,11 @@ def Predict_Price_clf():
         learning_rate = 0.1, loss='ls')
     clf.fit(X_train, y_train)
 
-    # PREDICT PRICE VALUES CORRESPONDING TO PREDICTORS
+    # Predict SalePrice values corresponding to Predictors
     y_train_pred = clf.predict(X_train)
     y_test_pred = clf.predict(X_test)
 
-    # PLOT THE PREDICTIONS VS THE TRUE VALUES
+    # Plot the Predictions vs the True values
     f, axes = plt.subplots(1, 2, figsize=(24, 12))
     axes[0].scatter(y_train, y_train_pred, color = "blue")
     axes[0].plot(y_train, y_train, 'w-', linewidth = 1)
@@ -189,7 +195,7 @@ def Predict_Price_clf():
 
     y = pd.DataFrame(df['price'])
 
-    # SUMMARIZE THE ACTUALS, PREDICTIONS AND ERRORS
+    # Summarize the Actuals, Predictions and Errors
     y_pred = (pd.DataFrame(y_pred, columns = ["Pred_Price"], index = df.index)).round({'Pred_Price':2})
     Result = pd.concat([X_pred, y_pred], axis = 1)
 
@@ -204,13 +210,13 @@ def Predict_Price_clf():
     Result2 = Result.rename(columns={"payment_value":"Payment","freight_value":"Freight","product_weight_g": "PWeight_g"})
     print(Result2.drop_duplicates().head(100))
 
-    # CHECK THE GOODNESS OF FIT (ON TRAIN DATA)
+    # Check the Goodness of Fit (on Train Data)
     print("\nGoodness of Fit of Model \tTrain Dataset")
     print("Explained Variance (R^2) \t:", clf.score(X_train, y_train))
     print("Mean Squared Error (MSE) \t:", mean_squared_error(y_train, y_train_pred))
     print()
 
-    # CHECK THE GOODNESS OF FIT (ON TEST DATA)
+    # Check the Goodness of Fit (on Test Data)
     print("Goodness of Fit of Model \tTest Dataset")
     print("Explained Variance (R^2) \t:", clf.score(X_test, y_test))
     print("Mean Squared Error (MSE) \t:", mean_squared_error(y_test, y_test_pred))
@@ -243,7 +249,6 @@ def main():
     Target_corr(0.3,'price')
     Model_based_fs()
     Principal_comp()
-    
     Predict_Price_Linreg()
     Predict_Price_clf()
 
@@ -261,3 +266,5 @@ if __name__ == "__main__":
 # https://machinelearningmastery.com/feature-selection-in-python-with-scikit-learn/
 
 # https://towardsdatascience.com/create-a-model-to-predict-house-prices-using-python-d34fe8fad88f
+
+
