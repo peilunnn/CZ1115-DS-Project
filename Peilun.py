@@ -6,7 +6,8 @@ from sklearn.cluster import KMeans
 from sklearn.model_selection import train_test_split
 import xgboost as xgb
 from sklearn.metrics import classification_report
-
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
 # import plotly.plotly as py
 # import plotly.offline as pyoff
 # import plotly.graph_objs as go
@@ -488,24 +489,65 @@ def classification_V2(CLV_14m: pd.DataFrame,CLV_df: pd.DataFrame) -> None:
     print(corr_matrix['CLV'].sort_values(ascending=False))
 
     #create X and y, X will be feature set and y is the label - LTV
-    X = CLV_class.drop(['CLV','m14_Revenue'],axis=1)
+    X = CLV_class[['category_low_value','category_mid_value','category_high_value']]
     y = CLV_class['CLV']
 
     #split training and test sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=56)
 
-    #XGBoost Multiclassification Model
-    ltv_xgb_model = xgb.XGBClassifier(max_depth=0, learning_rate=0.1,objective= 'multi:softprob',n_jobs=-1).fit(X_train, y_train)
+    # Create a Linear Regression object
+    linreg = LinearRegression()
 
-    print('Accuracy of XGB classifier on training set: {:.2f}'
-        .format(ltv_xgb_model.score(X_train, y_train)))
-    print('Accuracy of XGB classifier on test set: {:.2f}'
-        .format(ltv_xgb_model.score(X_test[X_train.columns], y_test)))
+    # # Train the Linear Regression model
+    # linreg.fit(X_train, y_train)
 
-    y_pred = ltv_xgb_model.predict(X_test)
+    # # Predict SalePrice values corresponding to Predictors
+    # y_train_pred = linreg.predict(X_train)
+    # y_test_pred = linreg.predict(X_test)
+
+    # # Plot the Predictions vs the True values
+    # f, axes = plt.subplots(1, 2, figsize=(24, 12))
+    # axes[0].scatter(y_train, y_train_pred, color = "blue")
+    # axes[0].plot(y_train, y_train, 'w-', linewidth = 1)
+    # axes[0].set_xlabel("True values of the Response Variable (Train)")
+    # axes[0].set_ylabel("Predicted values of the Response Variable (Train)")
+    # axes[1].scatter(y_test, y_test_pred, color = "green")
+    # axes[1].plot(y_test, y_test, 'w-', linewidth = 1)
+    # axes[1].set_xlabel("True values of the Response Variable (Test)")
+    # axes[1].set_ylabel("Predicted values of the Response Variable (Test)")
+    # plt.show()
+    
+    # X_pred = pd.DataFrame(CLV_class.drop(['CLV','m14_Revenue'],axis=1))  
+    
+    # # Check the Goodness of Fit (on Train Data)
+    # print("\nGoodness of Fit of Model \tTrain Dataset")
+    # print("Explained Variance (R^2) \t:", linreg.score(X_train, y_train))
+    # print("Mean Squared Error (MSE) \t:", mean_squared_error(y_train, y_train_pred))
+    # print()
+
+    # # Check the Goodness of Fit (on Test Data)
+    # print("Goodness of Fit of Model \tTest Dataset")
+    # print("Explained Variance (R^2) \t:", linreg.score(X_test, y_test))
+    # print("Mean Squared Error (MSE) \t:", mean_squared_error(y_test, y_test_pred))
+
+    # #XGBoost Multiclassification Model
+    # ltv_xgb_model = xgb.XGBClassifier(max_depth=5, learning_rate=0.000000001,objective= 'multi:softprob',n_jobs=-1).fit(X_train, y_train)
+    
+    linreg.fit(X_train, y_train)
+
+    print('Accuracy of LinearRegression on training set: {:.2f}'
+        .format(linreg.score(X_train, y_train)))
+    print('Accuracy of LinearRegression on test set: {:.2f}'
+        .format(linreg.score(X_test[X_train.columns], y_test)))
+    # print('Accuracy of XGB classifier on training set: {:.2f}'
+    #     .format(ltv_xgb_model.score(X_train, y_train)))
+    # print('Accuracy of XGB classifier on test set: {:.2f}'
+    #     .format(ltv_xgb_model.score(X_test[X_train.columns], y_test)))
+
+    #y_pred = ltv_xgb_model.predict(X_test)
+
+    y_pred = linreg.predict(X)
     print(classification_report(y_test, y_pred))
-
-
 
 def main():
     df = clean_dataset()
