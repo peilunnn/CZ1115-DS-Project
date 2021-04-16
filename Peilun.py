@@ -1,3 +1,4 @@
+from typing import List
 import pandas as pd
 import math
 from pandas_profiling import ProfileReport
@@ -7,10 +8,12 @@ from sklearn.cluster import KMeans
 from sklearn.model_selection import train_test_split
 import xgboost as xgb
 from sklearn.metrics import classification_report
-from typing import List
+from sklearn.metrics import confusion_matrix
+import numpy as np
 
 pd.set_option('display.max_columns', None)
 pd.set_option("max_rows", None)
+
 DEBUG = True
 
 
@@ -38,7 +41,7 @@ def get_dataset(output_path: str = "datasets/df_merged_pickle.pkl") -> None:
     df_test_prot.to_pickle("datasets/df_test_prot.pkl", protocol=4)
 
 
-def clean_dataset(path: str = f"datasets/{'df_test_prot' if DEBUG else 'df_merged_pickle'}.pkl") -> pd.DataFrame:
+def clean_dataset(path: str = f"datasets/{'df_test' if DEBUG else 'df_test_prot'}.pkl") -> pd.DataFrame:
     """
     Removes duplicate columns, renaming and dropping columns, filling in NaN values and returns the cleaned dataframe.
     """
@@ -106,20 +109,11 @@ def CLV_EDA(df: pd.DataFrame) -> pd.DataFrame:
     return CLV_df
 
 
-# RFM stands for recency - frequency - Monetary Value. We will group the customers as follows:
-# Low Value: Customers who are less active than others, not very frequent buyers and generate very low/zero/negative revenue.
-# Mid Value: Customers who often use Olist (but not as much as our High Values) and generates moderate revenue.
-# High Value: The group we don’t want to lose. High revenue, frequency and low inactivity.
-
 # ----------------------------------CLUSTERING-----------------------------
-
 def CLV_recency(CLV_df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculates the recency of each customer, plots the recency scores, shows recency clusters, and updates the CLV dataframe with the recency cluster classifications.
     """
-
-    # We first need to find out the most recent purchase date of each customer and see how many days they are inactive for. After having no. of inactive days for each customer, we will apply k-means clustering to assign customers a recency score.
-
     # CREATE A CUSTOMER MAX PURCHASE DATAFRAME FOR MAX PURCHASE DATE OF EACH CUSTOMER
     customer_max_purchase = CLV_df.groupby(
         "customer_unique_id").order_purchase_timestamp.max().reset_index()
@@ -135,7 +129,6 @@ def CLV_recency(CLV_df: pd.DataFrame) -> pd.DataFrame:
 
     print(CLV_df["recency"].describe())
     print("\n")
-    # Mean is higher than median (243 vs 227), so there is a positive right skew ie. most of the recency values are clustered around the left tail of the distribution.
 
     # PLOT A RECENCY HISTOGRAM
     sb.histplot(data=CLV_df["recency"])
@@ -152,8 +145,6 @@ def CLV_frequency(CLV_df: pd.DataFrame) -> pd.DataFrame:
     Calculates the frequency of each customer, plots the frequency scores, shows frequency clusters, and updates the CLV dataframe with the frequency cluster classifications.
     """
 
-    # We first need to find total number orders for each customer.
-
     # CREATE AN ORDER COUNTS DATAFRAME
     customer_frequency = CLV_df.groupby(
         "customer_unique_id").order_purchase_timestamp.count().reset_index()
@@ -165,7 +156,6 @@ def CLV_frequency(CLV_df: pd.DataFrame) -> pd.DataFrame:
 
     print(CLV_df["frequency"].describe())
     print("\n")
-    # Mean is higher than median (1.62 vs 1.00), so there is a positive right skew ie. most of the frequency values are clustered around the left tail of the distribution.
 
     # PLOT A FREQUENCY HISTOGRAM
     sb.histplot(data=CLV_df["frequency"])
@@ -182,8 +172,6 @@ def CLV_revenue(CLV_df: pd.DataFrame) -> pd.DataFrame:
     Calculates the revenue of each customer, plots the revenue scores, shows revenue clusters, and updates the CLV dataframe with the revenue cluster classifications.
     """
 
-    # We first need to find revenue for each customer.
-
     # CREATE A REVENUE DATAFRAME
     customer_revenue = CLV_df.groupby(
         "customer_unique_id").payment_value.sum().reset_index()
@@ -195,7 +183,6 @@ def CLV_revenue(CLV_df: pd.DataFrame) -> pd.DataFrame:
 
     print(CLV_df["revenue"].describe())
     print("\n")
-    # Mean is higher than median (408 vs 137), so there is a positive right skew ie. most of the revenue values are clustered around the left tail of the distribution.
 
     # PLOT A REVENUE HISTOGRAM
     sb.histplot(data=CLV_df["revenue"])
@@ -230,7 +217,7 @@ def elbow_method(CLV_df: pd.DataFrame, RFM_name: str) -> None:
 
 def k_means_clustering(CLV_df: pd.DataFrame, RFM_name: str, cluster_no: int) -> pd.DataFrame:
     """
-    Adds the ordered R/F/M_cluster dataframes to original CLV_df dataframe.
+    Does clustering and adds the ordered R/F/M_cluster dataframes to original CLV_df dataframe.
     """
 
     # ADD 4 CLUSTERS FOR R/F/M TO CLV_df DATAFRAME
@@ -269,7 +256,6 @@ def overall_RFM(CLV_df: pd.DataFrame) -> pd.DataFrame:
         CLV_df["frequency_cluster"] + CLV_df["revenue_cluster"]
     print(CLV_df.groupby("overall_score")[[
           "recency", "frequency", "revenue"]].mean())
-    # Score 0 is customers with the least value and 8 is customers with the highest value.
     return CLV_df
 
 
@@ -277,10 +263,6 @@ def categorize(CLV_df: pd.DataFrame) -> pd.DataFrame:
     """
     Categorizes customers into low/mid/high value based on the overall score.
     """
-
-    # 0 to 1: low value
-    # 2 to 3: mid value
-    # 4 to 6: high value
 
     CLV_df["category"] = "low_value"
     CLV_df.loc[CLV_df["overall_score"] > 1, 'category'] = 'mid_value'
@@ -290,7 +272,7 @@ def categorize(CLV_df: pd.DataFrame) -> pd.DataFrame:
 
 def plot_clusters(CLV_df: pd.DataFrame) -> None:
     """
-    Plots each cluster (low, mid or high value) of each pair (recency, frequency, revenue). 
+    Plots each cluster (low, mid or high value) of each pair (recency, frequency, revenue).
     """
 
     # REVENUE AGAINST FREQUENCY
@@ -357,15 +339,12 @@ def plot_clusters(CLV_df: pd.DataFrame) -> None:
     plt.xlabel("Recency")
     plt.ylabel("Frequency")
 
-    # We see that the clusters for recency, frequency and revenue are distinct from one another. There are also not many high value customers, and this could mean that most customers buy in bulk (leading to a high revenue) but are just one-off purchases (low frequency) and the purchases are not very frequent (low recency), resulting in a low or mid customer lifetime value.
-
 
 # -------------------------CLASSIFICATION------------------
 def split_months(CLV_df: pd.DataFrame) -> pd.DataFrame:
     """
     Splits the 21 months of data in CLV_df into 7 months and 14 months for train test set later.
     """
-    # From Jiaxin's timeseries, we have 21 months of data, from 2016 Oct to 2018 Aug. Thus we will take 7 months of data, calculate RFM and use it to predict CLV for the next 14 months.
     CLV_df_copy = CLV_df.copy()
     CLV_df_copy = CLV_df_copy.set_index(["order_purchase_timestamp"])
     CLV_7m = CLV_df_copy.loc['2016-10-01':'2017-06-01']
@@ -375,7 +354,6 @@ def split_months(CLV_df: pd.DataFrame) -> pd.DataFrame:
     CLV_14m = CLV_14m[["customer_unique_id", "recency", "recency_cluster", "frequency",
                        "frequency_cluster", "revenue", "revenue_cluster", "overall_score", "category"]]
 
-    # There is no cost specified in the dataset, so we take only revenue as CLV.
     CLV_14m["CLV"] = CLV_14m["revenue"]
 
     return CLV_7m, CLV_14m
@@ -397,13 +375,12 @@ def get_CLV_merged(CLV_14m: pd.DataFrame, CLV_df: pd.DataFrame) -> pd.DataFrame:
     kmeans = KMeans(n_clusters=3)
     kmeans.fit(CLV_merged[['m14_Revenue']])
     CLV_merged['CLV_cluster'] = kmeans.predict(CLV_merged[['m14_Revenue']])
+
     # order cluster number based on LTV
     CLV_merged = order_cluster('CLV_cluster', 'm14_Revenue', CLV_merged, True)
 
     print(CLV_merged.groupby('CLV_cluster')['m14_Revenue'].describe())
     print("\n")
-    # The dataset is unbalanced since 97% of the customers belong to cluster 0 (low value customers).
-
     return CLV_merged
 
 
@@ -411,7 +388,6 @@ def correlation_plot(CLV_merged: pd.DataFrame) -> None:
     """
     Plots a scatter plot of 14m CLV against overall_score.
     """
-    # Before building the model, let's look at the correlation between our predictor, overall RFM score and response, CLV.
     graph = CLV_merged.query("m14_Revenue < 4000000")
     x_low = graph.query("category == 'low_value'")['overall_score']
     y_low = graph.query("category == 'low_value'")['m14_Revenue']
@@ -422,7 +398,7 @@ def correlation_plot(CLV_merged: pd.DataFrame) -> None:
     x_high = graph.query("category == 'high_value'")['overall_score'],
     y_high = graph.query("category == 'high_value'")['m14_Revenue'],
 
-    fig = plt.figure(figsize=(12, 12))
+    fig = plt.figure(figsize=(20, 20))
     ax = fig.add_subplot(111)
     ax.scatter(x_low, y_low, s=10, c='b', marker="s", label='low')
     ax.scatter(x_mid, y_mid, s=10, c='r', marker="o", label='mid')
@@ -431,8 +407,6 @@ def correlation_plot(CLV_merged: pd.DataFrame) -> None:
     plt.title("14m CLV against overall_score")
     plt.xlabel("overall_score")
     plt.ylabel("14m CLV")
-
-    # It's quite clear that there is a positive correlation between overall_score and CLV: the higher the RFM score, the higher the CLV.
 
 
 def one_hot_encoding(CLV_merged: pd.DataFrame) -> pd.DataFrame:
@@ -449,7 +423,6 @@ def print_correlation(CLV_merged: pd.DataFrame) -> None:
     # calculate and show correlations
     corr_matrix = CLV_merged.corr()
     print(corr_matrix['CLV_cluster'].sort_values(ascending=False))
-    print("\n")
 
 
 def XGB_classification(CLV_merged: pd.DataFrame) -> None:
@@ -475,28 +448,40 @@ def XGB_classification(CLV_merged: pd.DataFrame) -> None:
           .format(ltv_xgb_model.score(X_test[X_train.columns], y_test)))
 
     y_pred = ltv_xgb_model.predict(X_test)
-    print(classification_report(y_test, y_pred))
-    # Since our data is so imbalanced, our predictor almost always predicts any given customer as belonging to cluster 0 and thereby achieves very high scores like precision and recall for clusters 0 and very low scores for clusters 1 and 2.
+    # print(classification_report(y_test, y_pred))
+
+    matrix = confusion_matrix(y_test, y_pred)
+    sb.heatmap(matrix, annot=True, fmt=".0f", annot_kws={"size": 6})
+    FP = matrix.sum(axis=0) - np.diag(matrix)
+    FN = matrix.sum(axis=1) - np.diag(matrix)
+    TP = np.diag(matrix)
+    TN = matrix.sum() - (FP + FN + TP)
+
+    recall = TP/(TP+FN)
+    precision = TP/(TP+FP)
+    f1 = ((1 + 2**2) * (precision * recall)) / \
+        ((1 + 2 ** 2) * precision + recall)
+    print(f"f1 score is: {f1[0]:.3f}")
 
 
-def main():
-    # get_dataset()
-    df = clean_dataset()
-    # EDA(df)
-    CLV_df = CLV_EDA(df)
-    CLV_df = CLV_recency(CLV_df)
-    CLV_df = CLV_frequency(CLV_df)
-    CLV_df = CLV_revenue(CLV_df)
-    CLV_df = overall_RFM(CLV_df)
-    CLV_df = categorize(CLV_df)
-    plot_clusters(CLV_df)
-    CLV_7m, CLV_14m = split_months(CLV_df)
-    CLV_merged = get_CLV_merged(CLV_14m, CLV_df)
-    correlation_plot(CLV_merged)
-    CLV_merged = one_hot_encoding(CLV_merged)
-    print_correlation(CLV_merged)
-    XGB_classification(CLV_merged)
+# def main():
+#     # get_dataset()
+#     df = clean_dataset()
+#     # EDA(df)
+#     CLV_df = CLV_EDA(df)
+#     CLV_df = CLV_recency(CLV_df)
+#     CLV_df = CLV_frequency(CLV_df)
+#     CLV_df = CLV_revenue(CLV_df)
+#     CLV_df = overall_RFM(CLV_df)
+#     CLV_df = categorize(CLV_df)
+#     plot_clusters(CLV_df)
+#     CLV_7m, CLV_14m = split_months(CLV_df)
+#     CLV_merged = get_CLV_merged(CLV_14m, CLV_df)
+#     correlation_plot(CLV_merged)
+#     print_correlation(CLV_merged)
+#     CLV_merged = one_hot_encoding(CLV_merged)
+#     XGB_classification(CLV_merged)
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
