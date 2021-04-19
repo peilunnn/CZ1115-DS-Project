@@ -43,7 +43,7 @@ def Display_filtered_PCV(value):
 '''Targets single data and prints out every related correlation relationships, with a value of more than abs(0.3)'''
 def Target_corr(value,data):
     PV_array = df_numeric.corr()
-    print("---Targeted correlation---")
+    print("---Features Selected---")
     #Correlation with output variable
     cor_target = abs(PV_array[data])
 
@@ -226,11 +226,10 @@ def Predict_Price_clf():
 #----------------------------------------------------------------------------------------------------CONCLUSION----------------------------------------------------------------------------------------------------
 
 #1) We import our dependencies, for linear regression we use sklearn (built in python library) and import linear regression from it.
-#2) We then initialize Linear Regression to a variable linreg.
-#3) We again import another dependency to split our data into train and test.
-#4) We've made our train data as 80% and 20% of the data to be our test data , and randomized the splitting of data by using random_state.
-#5) Next, we fit our train and test data into linear regression model.
-#6) After fitting our data to the model we found out our prediction, aka score of our data, is "49.603" % accurate
+#2) We again import another dependency to split our data into train and test.
+#3) We've made our train data as 80% and 20% of the data to be our test data , and randomized the splitting of data by using random_state.
+#4) Next, we fit our train and test data into linear regression model.
+#5) After fitting our data to the model we found out our prediction, aka score of our data, is "49.603" % accurate
 
 #To improve our prediction to atleast 85% target, we use a different method named gradient boosting regression for building a better prediction model as it is also used by many experts, so what is gradient boosting? 
 #It is a machine learning technique for regression and classification problems, which produces a prediction model in the form of an ensemble of weak prediction models, typically decision trees.
@@ -245,6 +244,7 @@ def Predict_Price_clf():
 #3. We got an accuracy of higher than the previous value!
 
 def main():
+    Pearson_Corr_values()
     Display_filtered_PCV(0.3)
     Target_corr(0.3,'price')
     Model_based_fs()
