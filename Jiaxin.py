@@ -66,6 +66,7 @@ def time_series():
 def findings():    
     import pandas as pd 
     import numpy as np
+    import seaborn as sns
     import matplotlib.pyplot as plt
     from Peilun import clean_dataset
     import folium
@@ -75,16 +76,12 @@ def findings():
     customer_by_state = customer_by_state.sort_values(by=['customer_unique_id'])
    
     #no. of orders per country
-    plt.style.use('seaborn')
-    plt.figure(figsize=(15,10))
-    plt.bar(customer_by_state['customer_state'], customer_by_state['customer_unique_id'])
-    plt.show()
     customer_by_state['lat']=df['geolocation_lat']
     customer_by_state['lon']=df['geolocation_lng']
     
     customer_by_state
     #  map
-    m = folium.Map(location=[-22.743975,-46.898709], tiles="OpenStreetMap", zoom_start=10)
+    m = folium.Map(location=[-22.743975,-46.898709], tiles="OpenStreetMap", zoom_start=5)
     for i in range(0,len(customer_by_state)):
        folium.Circle(
           location=[customer_by_state.iloc[i]['lat'], customer_by_state.iloc[i]['lon']],
@@ -116,8 +113,8 @@ def findings():
     orders = orders.groupby(['order_purchase_month', 'order_purchase_year']).count().reset_index()
     orders = orders.sort_values(by=['order_purchase_year', 'order_purchase_month'])
     orders["period"] =  orders["order_purchase_month"].astype(str) + "/" + orders["order_purchase_year"].astype(str)
-    plt.figure(figsize=(15,10))
-    plt.bar(orders['period'], orders['order_id'])
-    plt.xticks(rotation=75, fontsize=15, weight='bold')
-    plt.yticks(fontsize=15, weight='bold')
+    plt.figure(figsize=(20,10))
+    my_range=range(1,len(orders.index)+1)
+    plt.stem(orders['order_id'])
+    plt.xticks( my_range ,orders['period'])
     plt.show()
