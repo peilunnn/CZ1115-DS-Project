@@ -1,18 +1,20 @@
 from typing import List
 import pandas as pd
 import math
+from pandas_profiling import ProfileReport
 import seaborn as sb
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.model_selection import train_test_split
 import xgboost as xgb
+from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 import numpy as np
 
 pd.set_option('display.max_columns', None)
 pd.set_option("max_rows", None)
 
-DEBUG = False
+DEBUG = True
 
 
 def get_dataset(output_path: str = "datasets/df_merged_pickle.pkl") -> None:
@@ -39,7 +41,7 @@ def get_dataset(output_path: str = "datasets/df_merged_pickle.pkl") -> None:
     df_test_prot.to_pickle("datasets/df_test_prot.pkl", protocol=4)
 
 
-def clean_dataset(path: str = f"datasets/{'df_test' if DEBUG else 'df_100k'}.pkl") -> pd.DataFrame:
+def clean_dataset(path: str = f"datasets/{'df_test' if DEBUG else 'df_test_prot'}.pkl") -> pd.DataFrame:
     """
     Removes duplicate columns, renaming and dropping columns, filling in NaN values and returns the cleaned dataframe.
     """
@@ -67,6 +69,14 @@ def clean_dataset(path: str = f"datasets/{'df_test' if DEBUG else 'df_100k'}.pkl
     df = df.fillna(df['lead_behaviour_profile'].value_counts().index[0])
     # print(df.head())
     return df
+
+
+def EDA(df: pd.DataFrame, output_path: str = "EDA/profile_report.html") -> None:
+    """
+    Generates a pandas profiling report.
+    """
+    prof = ProfileReport(df)
+    prof.to_file(output_path)
 
 
 def CLV_EDA(df: pd.DataFrame) -> pd.DataFrame:
@@ -118,7 +128,6 @@ def CLV_recency(CLV_df: pd.DataFrame) -> pd.DataFrame:
         CLV_df, customer_max_purchase[["customer_unique_id", "recency"]], on="customer_unique_id")
 
     print(CLV_df["recency"].describe())
-    # print(CLV_df["recency"].value_counts())
     print("\n")
 
     # PLOT A RECENCY HISTOGRAM
@@ -146,7 +155,6 @@ def CLV_frequency(CLV_df: pd.DataFrame) -> pd.DataFrame:
                       on="customer_unique_id")
 
     print(CLV_df["frequency"].describe())
-    # print(CLV_df["frequency"].value_counts())
     print("\n")
 
     # PLOT A FREQUENCY HISTOGRAM
@@ -174,7 +182,6 @@ def CLV_revenue(CLV_df: pd.DataFrame) -> pd.DataFrame:
                       on="customer_unique_id")
 
     print(CLV_df["revenue"].describe())
-    # print(CLV_df["revenue"].value_counts())
     print("\n")
 
     # PLOT A REVENUE HISTOGRAM
@@ -282,8 +289,8 @@ def plot_clusters(CLV_df: pd.DataFrame) -> None:
     fig = plt.figure(figsize=(12, 12))
 
     ax = fig.add_subplot(111)
-    ax.scatter(x1_low, y1_low, s=10, c='r', marker="s", label='low')
-    ax.scatter(x1_mid, y1_mid, s=10, c='b', marker="o", label='mid')
+    ax.scatter(x1_low, y1_low, s=10, c='b', marker="s", label='low')
+    ax.scatter(x1_mid, y1_mid, s=10, c='r', marker="o", label='mid')
     ax.scatter(x1_high, y1_high, s=10, c='g', marker="o", label='high')
     plt.legend(loc='upper right')
     plt.title("Revenue against Frequency")
@@ -303,8 +310,8 @@ def plot_clusters(CLV_df: pd.DataFrame) -> None:
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(111)
-    ax.scatter(x2_low, y2_low, s=10, c='r', marker="s", label='low')
-    ax.scatter(x2_mid, y2_mid, s=10, c='b', marker="o", label='mid')
+    ax.scatter(x2_low, y2_low, s=10, c='b', marker="s", label='low')
+    ax.scatter(x2_mid, y2_mid, s=10, c='r', marker="o", label='mid')
     ax.scatter(x2_high, y2_high, s=10, c='g', marker="o", label='high')
     plt.legend(loc='upper right')
     plt.title("Revenue against Recency")
@@ -324,8 +331,8 @@ def plot_clusters(CLV_df: pd.DataFrame) -> None:
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(111)
-    ax.scatter(x3_low, y3_low, s=10, c='r', marker="s", label='low')
-    ax.scatter(x3_mid, y3_mid, s=10, c='b', marker="o", label='mid')
+    ax.scatter(x3_low, y3_low, s=10, c='b', marker="s", label='low')
+    ax.scatter(x3_mid, y3_mid, s=10, c='r', marker="o", label='mid')
     ax.scatter(x3_high, y3_high, s=10, c='g', marker="o", label='high')
     plt.legend(loc='upper right')
     plt.title("Frequency against Recency")
@@ -393,8 +400,8 @@ def correlation_plot(CLV_merged: pd.DataFrame) -> None:
 
     fig = plt.figure(figsize=(20, 20))
     ax = fig.add_subplot(111)
-    ax.scatter(x_low, y_low, s=10, c='r', marker="s", label='low')
-    ax.scatter(x_mid, y_mid, s=10, c='b', marker="o", label='mid')
+    ax.scatter(x_low, y_low, s=10, c='b', marker="s", label='low')
+    ax.scatter(x_mid, y_mid, s=10, c='r', marker="o", label='mid')
     ax.scatter(x_high, y_high, s=10, c='g', marker="o", label='high')
     plt.legend(loc='upper right')
     plt.title("14m CLV against overall_score")
@@ -435,7 +442,13 @@ def XGB_classification(CLV_merged: pd.DataFrame) -> None:
     ltv_xgb_model = xgb.XGBClassifier(
         max_depth=5, learning_rate=0.1, objective='multi:softprob', n_jobs=-1).fit(X_train, y_train)
 
+    print('Accuracy of XGB classifier on training set: {:.2f}'
+          .format(ltv_xgb_model.score(X_train, y_train)))
+    print('Accuracy of XGB classifier on test set: {:.2f}'
+          .format(ltv_xgb_model.score(X_test[X_train.columns], y_test)))
+
     y_pred = ltv_xgb_model.predict(X_test)
+    # print(classification_report(y_test, y_pred))
 
     matrix = confusion_matrix(y_test, y_pred)
     sb.heatmap(matrix, annot=True, fmt=".0f", annot_kws={"size": 6})
@@ -454,6 +467,7 @@ def XGB_classification(CLV_merged: pd.DataFrame) -> None:
 # def main():
 #     # get_dataset()
 #     df = clean_dataset()
+#     # EDA(df)
 #     CLV_df = CLV_EDA(df)
 #     CLV_df = CLV_recency(CLV_df)
 #     CLV_df = CLV_frequency(CLV_df)
