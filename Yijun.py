@@ -82,7 +82,7 @@ def Principal_comp():
     cum_var_exp = np.cumsum(var_exp)
 
     with plt.style.context('seaborn-whitegrid'):
-        plt.figure(figsize=(6, 4))
+        plt.figure(figsize=(12, 12))
         plt.bar(range(19), var_exp, alpha=0.5, align='center',
                 label='individual explained variance')
         plt.step(range(19), cum_var_exp, where='mid',
@@ -148,7 +148,8 @@ def Predict_Price_Linreg():
     df_errs = pd.DataFrame(df_errs, columns = ["%_Error"], index = Result.index)
     Result = pd.concat([Result,df_errs], axis = 1)
 
-    Result2 = Result.rename(columns={"payment_value":"Payment","freight_value":"Freight","product_weight_g": "PWeight_g"})
+    Result2 = Result.drop(['payment_value','freight_value','product_weight_g'], axis=1) 
+    # Result.rename(columns={"payment_value":"Payment","freight_value":"Freight","product_weight_g": "PWeight_g"})
     print(Result2.drop_duplicates().head(100))
 
     # Check the Goodness of Fit (on Train Data)
@@ -207,7 +208,8 @@ def Predict_Price_clf():
     df_errs = pd.DataFrame(df_errs, columns = ["%_Error"], index = Result.index)
     Result = pd.concat([Result,df_errs], axis = 1)
 
-    Result2 = Result.rename(columns={"payment_value":"Payment","freight_value":"Freight","product_weight_g": "PWeight_g"})
+    Result2 = Result.drop(['payment_value','freight_value','product_weight_g'], axis=1) 
+    #Result.rename(columns={"payment_value":"Payment","freight_value":"Freight","product_weight_g": "PWeight_g"})
     print(Result2.drop_duplicates().head(100))
 
     # Check the Goodness of Fit (on Train Data)
@@ -264,7 +266,6 @@ if __name__ == "__main__":
 # https://builtin.com/data-science/step-step-explanation-principal-component-analysis
 # https://sebastianraschka.com/Articles/2015_pca_in_3_steps.html
 # https://machinelearningmastery.com/feature-selection-in-python-with-scikit-learn/
-
 # https://towardsdatascience.com/create-a-model-to-predict-house-prices-using-python-d34fe8fad88f
 
 

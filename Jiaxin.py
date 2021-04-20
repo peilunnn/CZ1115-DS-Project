@@ -121,13 +121,13 @@ def findings():
     customer_by_state
     #  map
     m = folium.Map(location=[-22.743975, -46.898709],
-                   tiles="OpenStreetMap", zoom_start=10)
+                   tiles="OpenStreetMap", zoom_start=5)
     for i in range(0, len(customer_by_state)):
         folium.Circle(
             location=[customer_by_state.iloc[i]['lat'],
                       customer_by_state.iloc[i]['lon']],
             popup=customer_by_state.iloc[i]['customer_state'],
-            radius=float(customer_by_state.iloc[i]['customer_unique_id'])*500,
+            radius=float(customer_by_state.iloc[i]['customer_unique_id'])*10,
             color='crimson',
             fill=True,
             fill_color='crimson'
