@@ -14,7 +14,7 @@ import numpy as np
 pd.set_option('display.max_columns', None)
 pd.set_option("max_rows", None)
 
-DEBUG = True
+DEBUG = False
 
 
 def get_dataset(output_path: str = "datasets/df_merged_pickle.pkl") -> None:
@@ -36,12 +36,11 @@ def get_dataset(output_path: str = "datasets/df_merged_pickle.pkl") -> None:
     df_merged = df_merged_1.merge(df_merged_2, how="inner", on="customer_id")
     df_merged.to_pickle(output_path, protocol=4)
 
-    df_test_prot = df_merged.sample(100000)
-    # df_test_prot = df_merged.sample(1000)
-    df_test_prot.to_pickle("datasets/df_test_prot.pkl", protocol=4)
+    df_100k = df_merged.sample(100000)
+    df_test_prot.to_pickle("datasets/df_100k.pkl", protocol=4)
 
 
-def clean_dataset(path: str = f"datasets/{'df_test' if DEBUG else 'df_test_prot'}.pkl") -> pd.DataFrame:
+def clean_dataset(path: str = f"datasets/{'df_test' if DEBUG else 'df_100k'}.pkl") -> pd.DataFrame:
     """
     Removes duplicate columns, renaming and dropping columns, filling in NaN values and returns the cleaned dataframe.
     """
