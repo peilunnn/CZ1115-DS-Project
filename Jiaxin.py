@@ -149,33 +149,17 @@ def findings():
     plt.xlabel('month')
     plt.ylabel('total earnings')
 
-    # no. of items per month
-    # df['order_purchase_year'] = pd.to_datetime(
-    #     df['order_purchase_timestamp']).dt.year
-    # df['order_purchase_month'] = pd.to_datetime(
-    #     df['order_purchase_timestamp']).dt.month
-    # orders = df[['order_id', 'order_purchase_year', 'order_purchase_month']]
-    # orders = orders.groupby(
-    #     ['order_purchase_month', 'order_purchase_year']).count().reset_index()
-    # orders = orders.sort_values(
-    #     by=['order_purchase_year', 'order_purchase_month'])
-    # orders["period"] = orders["order_purchase_month"].astype(
-    #     str) + "/" + orders["order_purchase_year"].astype(str)
-    # plt.figure(figsize=(15, 10))
-    # plt.bar(orders['period'], orders['order_id'])
-    # plt.xticks(rotation=75, fontsize=15, weight='bold')
-    # plt.yticks(fontsize=15, weight='bold')
-    # orders = orders.groupby(
-    #     ['order_purchase_month', 'order_purchase_year']).count().reset_index()
-    # orders = orders.sort_values(
-    #     by=['order_purchase_year', 'order_purchase_month'])
-    # orders["period"] = orders["order_purchase_month"].astype(
-    #     str) + "/" + orders["order_purchase_year"].astype(str)
-    # plt.figure(figsize=(20, 10))
-    # my_range = range(1, len(orders.index)+1)
-    # plt.stem(orders['order_id'])
-    # plt.xticks(my_range, orders['period'])
-    #plt.show()
+    df['order_purchase_year'] = pd.to_datetime(df['order_purchase_timestamp']).dt.year
+    df['order_purchase_month'] = pd.to_datetime(df['order_purchase_timestamp']).dt.month
+    orders = df[['order_id', 'order_purchase_year', 'order_purchase_month']]
+    orders = orders.groupby(['order_purchase_month', 'order_purchase_year']).count().reset_index()
+    orders = orders.sort_values(by=['order_purchase_year', 'order_purchase_month'])
+    orders["period"] =  orders["order_purchase_month"].astype(str) + "/" + orders["order_purchase_year"].astype(str)
+    plt.figure(figsize=(20,10))
+    my_range=range(1,len(orders.index)+1)
+    plt.stem(orders['order_id'])
+    plt.xticks( my_range ,orders['period'])
+    plt.show()
 
 
 
